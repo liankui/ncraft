@@ -258,7 +258,9 @@ func (n *Nats) pullSubscribe(opts *messaging.Subscription, cb nats.MsgHandler) (
     //ss := strconv.Itoa(rand.Intn(10000))
     durableName = strings.Join([]string{durableName, suffix}, "-")
 
-    subOpts := []nats.SubOpt{nats.PullMaxWaiting(12800)}
+    maxWaitingNum := 12800
+    subOpts := []nats.SubOpt{nats.PullMaxWaiting(maxWaitingNum)}
+    logs.Debugw("--------", "maxWaitingNum", maxWaitingNum)
     if opts.AckTimeout != nil {
         subOpts = append(subOpts, nats.AckWait(opts.AckTimeout.ToDuration()))
     }
