@@ -130,7 +130,7 @@ func initWithConsole(encode string) zapcore.Core {
 	return zapcore.NewCore(formatEncoder, consoleDebugging, defaultLevel)
 }
 
-func initWithFile(encode, filename string, maxSize, maxBackups, maxAge int) zapcore.Core {
+func initWithFile(encode, filename string, maxSize, maxBackups, maxAge int, compress bool) zapcore.Core {
 	encodeConfig := zapcore.EncoderConfig{
 		TimeKey:             "time",
 		LevelKey:            "level",
@@ -160,7 +160,7 @@ func initWithFile(encode, filename string, maxSize, maxBackups, maxAge int) zapc
 		MaxSize:    maxSize, // megabytes
 		MaxBackups: maxBackups,
 		MaxAge:     maxAge, // days
-		Compress:   true,
+		Compress:   compress,
 	})
 
 	return zapcore.NewCore(formatEncoder, w, defaultLevel)
@@ -245,7 +245,7 @@ func newZap(cfg *Config) *ZapLogger {
 		cores = append(cores, initWithConsole(cfg.Encode))
 	}
 	if strings.Contains(output, "file") {
-		cores = append(cores, initWithFile(cfg.File.Encode, cfg.File.Path, cfg.File.MaxSize, cfg.File.MaxBackups, cfg.File.MaxAge))
+		cores = append(cores, initWithFile(cfg.File.Encode, cfg.File.Path, cfg.File.MaxSize, cfg.File.MaxBackups, cfg.File.MaxAge, cfg.File.Compress))
 	}
 
 	core := zapcore.NewTee(cores...)

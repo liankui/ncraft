@@ -6,4 +6,5 @@ type LogFileConfig struct {
     MaxBackups int    `json:"maxBackups" default:"10"`
     MaxAge     int    `json:"maxAge" default:"30"`
     Encode     string `json:"encode"  default:"json"`
+    Compress   bool   `json:"compress" default:"true"`
 }
