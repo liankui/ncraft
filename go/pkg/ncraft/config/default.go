@@ -6,28 +6,28 @@ import (
 	"time"
 
 	"github.com/ncraft-io/ncraft/go/pkg/ncraft/config/loader"
-	memory2 "github.com/ncraft-io/ncraft/go/pkg/ncraft/config/loader/memory"
+	"github.com/ncraft-io/ncraft/go/pkg/ncraft/config/loader/memory"
 	"github.com/ncraft-io/ncraft/go/pkg/ncraft/config/reader"
 	"github.com/ncraft-io/ncraft/go/pkg/ncraft/config/reader/json"
 	"github.com/ncraft-io/ncraft/go/pkg/ncraft/config/source"
 )
 
 type config struct {
+	// the current values
+	vals reader.Values
 	exit chan bool
+	// the current snapshot
+	snap *loader.Snapshot
 	opts Options
 
 	sync.RWMutex
-	// the current snapshot
-	snap *loader.Snapshot
-	// the current values
-	vals reader.Values
 }
 
 type watcher struct {
 	lw    loader.Watcher
 	rd    reader.Reader
-	path  []string
 	value reader.Value
+	path  []string
 }
 
 func newConfig(opts ...Option) (Config, error) {
@@ -37,7 +37,9 @@ func newConfig(opts ...Option) (Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	go c.run()
+	if !c.opts.WithWatcherDisabled {
+		go c.run()
+	}
 
 	return &c, nil
 }
@@ -53,7 +55,12 @@ func (c *config) Init(opts ...Option) error {
 
 	// default loader uses the configured reader
 	if c.opts.Loader == nil {
-		c.opts.Loader = memory2.NewLoader(memory2.WithReader(c.opts.Reader))
+		loaderOpts := []loader.Option{memory.WithReader(c.opts.Reader)}
+		if c.opts.WithWatcherDisabled {
+			loaderOpts = append(loaderOpts, memory.WithWatcherDisabled())
+		}
+
+		c.opts.Loader = memory.NewLoader(loaderOpts...)
 	}
 
 	err := c.opts.Loader.Load(c.opts.Source...)
@@ -81,7 +88,7 @@ func (c *config) Options() Options {
 func (c *config) run() {
 	watch := func(w loader.Watcher) error {
 		for {
-			// get change-set
+			// get changeset
 			snap, err := w.Next()
 			if err != nil {
 				return err
@@ -119,7 +126,7 @@ func (c *config) run() {
 			case <-done:
 			case <-c.exit:
 			}
-			_ = w.Stop()
+			w.Stop()
 		}()
 
 		// block watch
@@ -152,7 +159,7 @@ func (c *config) Scan(v interface{}) error {
 	return c.vals.Scan(v)
 }
 
-// Sync loads all the sources, calls the parser and updates the config
+// sync loads all the sources, calls the parser and updates the config.
 func (c *config) Sync() error {
 	if err := c.opts.Loader.Sync(); err != nil {
 		return err
