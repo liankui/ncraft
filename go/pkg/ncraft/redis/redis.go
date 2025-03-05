@@ -35,6 +35,8 @@ type Redis interface {
 	RunBatch(ctx context.Context, batch Batch) ([]interface{}, error)
 
 	Stats() *Stats
+
+	Eval(ctx context.Context, script string, keys []string, args ...any) (any, error)
 }
 
 type Batch interface {
